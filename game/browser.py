@@ -89,7 +89,8 @@ class GameBrowser:
             '--disable-infobars',
             '--no-default-browser-check',
             '--no-first-run',
-            '--enable-features=NetworkService,NetworkServiceInProcess'            
+            '--enable-features=NetworkService,NetworkServiceInProcess',
+            '--ignore-certificate-errors',
         ]
         
         # read all subfolder names from Folder.CRX and form extension list

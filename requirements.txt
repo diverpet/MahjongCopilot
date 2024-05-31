@@ -9,4 +9,6 @@ riichi>=0.1.1
 tkhtmlview
 pyinstaller
 aliyun-log-python-sdk
-
+ruamel.yaml
+loguru
+protobuf==3.20.1

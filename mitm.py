@@ -11,6 +11,7 @@ from mitmproxy.tools.dump import DumpMaster
 import common.utils as utils
 from common.utils import Folder
 from common.log_helper import LOGGER
+from addons import WebSocketAddon
 
 class WsType:
     """ websocket msg type"""
@@ -29,15 +30,15 @@ class WSMessage:
 class WSDataInterceptor:
     """ mitm websocket addon that intercepts data"""
 
-    def __init__(self, allowed_domains:list=None):
+    def __init__(self, allowed_domains:list=None, addon=None):
         """ pass flow_message_dict for storing intercepted flow data
         params:
-            allowed_domains: list of allowed domains to intercept. websocket connection for other websites will be killed"""
-        if allowed_domains:
-            self.allowed_domains = allowed_domains
-        else:
-            self.allowed_domains = None
-        self.message_queue = queue.Queue()      
+            allowed_domains: list of allowed domains to intercept. websocket connection for other websites will be killed
+            addon: WebSocketAddon to be deployed
+        """
+        self.allowed_domains = allowed_domains if allowed_domains else None
+        self.message_queue = queue.Queue()
+        self.addon = addon
         """Queue for unretrieved messages
         each element is: WSMessage"""
         
@@ -63,9 +64,15 @@ class WSDataInterceptor:
         
     def websocket_message(self, flow:HTTPFlow):
         """ ws message handler"""
-        msg = flow.websocket.messages[-1]
-        if self.allow_url(flow.request.pretty_url):
-            self.message_queue.put(WSMessage(flow.id, msg.timestamp, msg.content))
+        msg = flow.websocket.messages[-1].copy()
+        flow_pretty_url = flow.request.pretty_url
+        flow_id = flow.id
+        if self.addon:
+            self.addon.websocket_message(flow)  # Preprocess using WebSocketAddon
+
+            # Continue with existing logic
+        if self.allow_url(flow_pretty_url):
+            self.message_queue.put(WSMessage(flow_id, msg.timestamp, msg.content))
         
     def websocket_end(self, flow:HTTPFlow):
         """ ws flow end handler"""
@@ -113,8 +120,9 @@ class MitmController:
         self.mode = None
         self.upstream_proxy = None
         self.proxy_str:str = None
-        
-        self.ws_data_addon = WSDataInterceptor(allowed_domains)
+
+        self.addon = WebSocketAddon()  # Initialize WebSocketAddon
+        self.ws_data_addon = WSDataInterceptor(allowed_domains, self.addon)
         
     def start(self, port:int, mode=HTTP, upstream_proxy:str=None):
         """ Start mitm server thread
@@ -228,17 +236,17 @@ class MitmController:
             return False
 
             
-if __name__ == '__main__':
-    # Test code
-    mitm = MitmController()
-    LOGGER.info("Starting MITM")
-    mitm.start(8999)
-    LOGGER.info("Installing certificate")
-    res = mitm.install_mitm_cert()    
-    LOGGER.info("MITM on:%s", mitm.is_running())
-    LOGGER.info("Shutting down mitm")
-    mitm.stop()
-    LOGGER.info("MITM on:%s", mitm.is_running())
-    import time
-    time.sleep(1)
-    LOGGER.info("MITM on:%s", mitm.is_running())
+# if __name__ == '__main__':
+#     # Test code
+#     mitm = MitmController()
+#     LOGGER.info("Starting MITM")
+#     mitm.start(8999)
+#     LOGGER.info("Installing certificate")
+#     res = mitm.install_mitm_cert()
+#     LOGGER.info("MITM on:%s", mitm.is_running())
+#     LOGGER.info("Shutting down mitm")
+#     mitm.stop()
+#     LOGGER.info("MITM on:%s", mitm.is_running())
+#     import time
+#     time.sleep(1)
+#     LOGGER.info("MITM on:%s", mitm.is_running())
