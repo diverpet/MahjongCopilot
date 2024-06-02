@@ -31,6 +31,9 @@ METHODS_TO_IGNORE = [
     liqi.LiqiMethod.fetchServerTime,
 ]
 
+# Least time to consider a game is normal
+ANOMALOUS_GAME_TIME_THRESHOLD = 60 * 2
+
 class BotManager:
     """ Bot logic manager"""
     def __init__(self, setting:Settings) -> None:
@@ -50,6 +53,7 @@ class BotManager:
 
         self.lobby_flow_id:str = None                   # websocket flow Id for lobby
         self.game_flow_id = None                        # websocket flow that corresponds to the game/match
+        self.game_started_time = None                   # Time when game flow started
 
         self.bot_need_update:bool = True                # set this True to update bot in main thread
         self.mitm_proxinject_need_update:bool = False    # set this True to update mitm and prox inject in main thread
@@ -127,6 +131,9 @@ class BotManager:
         ms_url = self.st.ms_url
         proxy = self.mitm_server.proxy_str
         self.browser.start(ms_url, proxy, self.st.browser_width, self.st.browser_height, self.st.enable_chrome_ext)
+
+    def stop_browser(self):
+        self.browser.stop(True)
 
     def is_browser_zoom_off(self):
         """ check browser zoom level, return true if zoomlevel is not 1"""
@@ -340,9 +347,15 @@ class BotManager:
         elif msg.type == mitm.WsType.END:
             LOGGER.debug("Websocket Flow ended: %s", msg.flow_id)
             if msg.flow_id == self.game_flow_id:
-                LOGGER.info("Game flow ended. processing end game")
-                self._process_end_game()
-                self.game_flow_id = None
+                current_time = time.time()
+                if current_time - self.game_started_time < ANOMALOUS_GAME_TIME_THRESHOLD:
+                    LOGGER.warning("Game ended too quickly, Probable loading error. Restarting browser...")
+                    self.stop_browser()
+                    self.start_browser()
+                else:
+                    LOGGER.info("Game flow ended. processing end game")
+                    self._process_end_game()
+                    self.game_flow_id = None
             if msg.flow_id == self.lobby_flow_id:
                 # lobby flow ended
                 LOGGER.info("Lobby flow ended.")
@@ -386,6 +399,7 @@ class BotManager:
                     LOGGER.info("authGame msg: %s", liqimsg)
                     LOGGER.info("Game Started. Game Flow ID=%s", msg.flow_id)
                     self.game_flow_id = msg.flow_id
+                    self.game_started_time = time.time()
                     self.game_state = GameState(self.bot)    # create game state with bot
                     self.game_state.input(liqimsg)      # authGame -> mjai:start_game, no reaction
                     self.game_exception = None
