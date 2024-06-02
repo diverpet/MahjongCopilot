@@ -351,6 +351,7 @@ class BotManager:
                 if current_time - self.game_started_time < ANOMALOUS_GAME_TIME_THRESHOLD:
                     LOGGER.warning("Game ended too quickly, Probable loading error. Restarting browser...")
                     self.stop_browser()
+                    self.game_started_time = None
                     time.sleep(1)
                     self.start_browser()
                 else:
