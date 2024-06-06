@@ -287,12 +287,19 @@ class Automation:
         self.executor = browser
         self.st = setting
         self.g_v = GameVisual(browser)
+        self.randomize_seed = self.st.ai_randomize_choice
+        self._refresh_random_seed()
         
         self._task:AutomationTask = None        # the task thread        
         self.ui_state:UiState = UiState.NOT_RUNNING   # Where game UI is at. initially not running 
         
         self.last_emoji_time:float = 0.0        # timestamp of last emoji sent   
-    
+
+    def _refresh_random_seed(self):
+        if self.st.ai_randomize_choice and self.st.ai_randomize_choice == 6: # 6 = 1-5 random
+            self.randomize_seed = random.randint(1,5)
+            LOGGER.info("Randomize seed refreshed, seed = %d", self.randomize_seed)
+
     def is_running_execution(self):
         """ if task is still running"""
         if self._task and self._task.is_running():
@@ -388,7 +395,7 @@ class Automation:
         op_step = game_state.last_op_step
         mjai_type = mjai_action['type']        
         
-        if self.st.ai_randomize_choice:     # randomize choice
+        if self.randomize_seed:     # randomize choice
             mjai_action = self.randomize_action(mjai_action, gi) 
         # Dahai action
         if  mjai_type == MjaiType.DAHAI:       
@@ -425,7 +432,7 @@ class Automation:
     
     def randomize_action(self, action:dict, gi:GameInfo) -> dict:
         """ Randomize ai choice: pick according to probaility from top 3 options"""
-        n = self.st.ai_randomize_choice     # randomize strength. 0 = no random, 5 = according to probability
+        n = self.randomize_seed     # randomize strength. 0 = no random, 5 = according to probability
         if n == 0:
             return action
         mjai_type = action['type']
@@ -774,6 +781,8 @@ class Automation:
         if self.ui_state != UiState.NOT_RUNNING:
             self.ui_state = UiState.GAME_ENDING
         # if auto next. go to lobby, then next
+        # refresh random seed
+        self._refresh_random_seed()
         
     def on_exit_lobby(self):
         """ exit lobby handler"""

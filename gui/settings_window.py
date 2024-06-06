@@ -231,7 +231,7 @@ class SettingsWindow(tk.Toplevel):
         _label = ttk.Label(main_frame, text=self.st.lan().RANDOM_CHOICE)
         _label.grid(row=cur_row, column=0, **args_label)
         self.randomized_choice_var = tk.StringVar(value=self.st.ai_randomize_choice)
-        options = ['0 (Off)',1,2,3,4,5]
+        options = ['0 (Off)',1,2,3,4,5,'6 (1-5 random)']
         random_choice_entry = ttk.Combobox(
             main_frame, textvariable=self.randomized_choice_var, values=options, state="readonly", width=std_wid)
         random_choice_entry.grid(row=cur_row, column=1, **args_entry)
