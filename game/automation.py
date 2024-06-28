@@ -11,6 +11,7 @@ import time
 import random
 import threading
 from typing import Iterable, Iterator
+import numpy as np
 
 from common.mj_helper import MjaiType, MSType, MJAI_TILES_19, MJAI_TILES_28, MJAI_TILES_SORTED, determine_kan_tiles
 from common.mj_helper import sort_mjai_tiles, cvt_ms2mjai, determine_kan_type, determine_chi_tiles, determine_pon_tiles
@@ -21,6 +22,20 @@ from common.utils import UiState, GAME_MODES
 from .img_proc import ImgTemp, GameVisual
 from .browser import GameBrowser
 from .game_state import GameInfo, GameState
+
+
+def generate_normal_random_int():
+    mean = 4.5  # 中心点
+    std_dev = 0.9  # 标准差设置得较小，以使大部分数据集中在中心
+
+    # 生成一个符合正态分布的随机数
+    random_float = np.random.normal(mean, std_dev)
+
+    # 四舍五入到最近的整数，并限制在1到8之间
+    random_int = round(random_float)
+    random_int = max(min(random_int, 8), 1)
+
+    return random_int
 
 
 class Positions:
@@ -297,7 +312,7 @@ class Automation:
 
     def _refresh_random_seed(self):
         if self.st.ai_randomize_choice and self.st.ai_randomize_choice == 6: # 6 = 1-5 random
-            self.randomize_seed = random.randint(1,5)
+            self.randomize_seed = generate_normal_random_int()
             LOGGER.info("Randomize seed refreshed, seed = %d", self.randomize_seed)
 
     def is_running_execution(self):
@@ -441,10 +456,10 @@ class Automation:
             return action
         mjai_type = action['type']
         options: dict = action['meta_options']
-        # get options (tile only) from top 3 at most
-        top_ops = sorted(options, key=lambda item: item[1], reverse=True)[:3]
+        # get options (tile only) from top 4 at most
+        top_ops = sorted(options, key=lambda item: item[1], reverse=True)[:4]
 
-        # pick from top3 according to probability
+        # pick from top4 according to probability
         power = 1 / (0.2 * n)
         sum_probs = sum([v ** power for k, v in top_ops])
         top_ops_powered = [(k, v ** power / sum_probs) for k, v in top_ops]
