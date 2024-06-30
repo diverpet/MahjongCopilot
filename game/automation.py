@@ -31,9 +31,9 @@ def generate_normal_random_int():
     # 生成一个符合正态分布的随机数
     random_float = np.random.normal(mean, std_dev)
 
-    # 四舍五入到最近的整数，并限制在1到8之间
+    # 四舍五入到最近的整数，并限制在1到6之间
     random_int = round(random_float)
-    random_int = max(min(random_int, 8), 1)
+    random_int = max(min(random_int, 6), 1)
 
     return random_int
 
